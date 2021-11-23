@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: This template 2 S3 bucket and a SQS queue to that links both buckets
+
+# The following metadata is used to group the parameters
+#<---Metadata--->
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "buckets"
+        Parameters:
+          - S3inputbucket
+          - S3outputbucket
+
+# <---Parameters--->
+Parameters:
+  S3inputbucketParam:
+    Default: s3unmodifiedfilesforprocessing27100
+    Description: Enter the name of the input bucket
+    Type: String
+
+  S3outputbucketParam:
+    Default: s3modifiedfilesprocessed27100
+    Description: Enter the name of the output bucket
+    Type: String
+
+  SQSqueue:
+    Description: Enter the name of the SQSqueue
+    Type: String
+
+#<---Resources--->
+Resources:
+  LambdaBucketrole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: Json
+      Description: The role for the s3 bucket
+      Policies:
+        PolicyName: root
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - "s3:*"
+                - "s3-object-lambda:*"
+              Resource: "*"
+      RoleName: LambdaBucketrole
+
+  S3inputbucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3inputbucketParam
+
+  S3outputbucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3outputbucketParam
+
+  LambdaConvert:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.8
+      Role: !GetAtt LambdaBucketrole.Arn
+      Handler: index.handler
+      Code:
+        ZipFile: |
+          print('hello world')
+      Description: Invoke a function in develop
+      TracingConfig:
+        Mode: Active
+
+#<---Outputs--->
+Outputs:
+  S3inputbucket:
+    Description: Bucket1
+    Export:
+      Name: !Sub ${AWS::StackName}-S3inputbucket
+    Value: !Ref S3inputbucket
+
+  S3outputbucket:
+    Description: Bucket2
+    Export:
+      Name: !Sub ${AWS::StackName}-S3outputbucket
+    Value: !Ref S3outputbucket
